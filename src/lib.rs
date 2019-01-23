@@ -78,14 +78,24 @@ impl<E: Engine> Secret<E> {
 impl Secret<Bls12> {
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let mut ints = [0u64; 4];
-        for (i, byte) in bytes.iter().enumerate() {
-            let z = i / 8;
-            if z >= ints.len() {
-                return None
-            }
-            ints[z] |= (*byte as u64) << (i - z * 8);
+        for i in 0..4 {
+            let mut item = [0u8; 8];
+            let start = 8*i;
+            let end = 8*(i+1);
+            item.copy_from_slice(&bytes[start..end]);
+            ints[i] = u64::from_be_bytes(item);
         }
         Fr::from_repr(FrRepr(ints)).ok().map(|fr| Secret { x: fr })
+    }
+    pub fn as_bytes(&self) -> [u8; 32] {
+        let ints = self.x.into_repr();
+        let ints = ints.as_ref();
+        let mut bytes = [0u8; 32];
+        bytes[0..8].copy_from_slice(&ints[0].to_be_bytes());
+        bytes[8..16].copy_from_slice(&ints[1].to_be_bytes());
+        bytes[16..24].copy_from_slice(&ints[2].to_be_bytes());
+        bytes[24..32].copy_from_slice(&ints[3].to_be_bytes());
+        bytes
     }
 }
 
